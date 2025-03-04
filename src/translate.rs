@@ -25,7 +25,7 @@ pub fn translate(file_path: &PathBuf, file_name: &str, theme_file: &PathBuf, gen
         templatefile = templatefile.replace(&new_var, color_code);
 
     }
-    println!("template: {}\n{}", &file_name, templatefile);
+    println!("template: {}", &file_name);
     if generated == &PathBuf::from("none") {
         println!("generated path is none");
         return;
