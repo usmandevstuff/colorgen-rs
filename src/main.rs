@@ -1,24 +1,29 @@
 use clap::{error::Result, Parser};
 use serde::{Deserialize, Serialize};
+use translate::translate;
 use std::fs;
 use std::path::PathBuf;
 
+mod translate;
+
 #[derive(Parser)]
 #[command(
-    about = "a cli app to generate colors based on a theme file."
+    name = "colorgen",
+    version = "0.1.1",
+    about = "a cli app to generate colors based on a theme file.",
 )]
 struct Cli {
     #[arg(short, long)]
     template: Option<PathBuf>,
 
     #[arg(short, long)]
-    generated: Option<PathBuf>,
+    output: Option<PathBuf>,
 
-    #[arg(short, long, default_value = "generic")]
-    language: Option<String>,
-
-    #[arg(long)]
+    #[arg(short = 'T', long)]
     theme_txt: Option<PathBuf>,
+
+    #[arg(short, help = "use ONLY when you want to use config system.", action = clap::ArgAction::SetTrue)]
+    config: Option<bool>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -90,14 +95,14 @@ impl Config {
 
 fn main() {
     let cli = Cli::parse();
-    let template = cli.template.clone().unwrap_or("none".into());
-    let generated = cli.generated.clone().unwrap_or("none".into());
-    let language = cli.language.clone().unwrap_or("none".into());
-    let theme_txt = cli.theme_txt.clone().unwrap_or("none".into());
+    let template = cli.template.unwrap_or("none".into());
+    let generated = cli.output.unwrap_or("none".into());
+    let theme_txt = cli.theme_txt.unwrap_or("none".into());
+    let use_config = cli.config.unwrap_or(false);
     println!("template: {:?}", &template);
-    println!("language: {:?}", &language);
     println!("generated: {:?}", &generated);
     println!("theme_txt: {:?}", &theme_txt);
+    println!("config: {:?}", &use_config);
     println!("----------------------");
 
     // let theme_file = fs::read_to_string(&theme_txt).expect("Unable to read theme_txt file");
@@ -107,11 +112,25 @@ fn main() {
     //     let mut word = line.split(" -> ");
     //     println!("word: {:?}", word.next().unwrap().trim_matches('$'));
     // }
-    let config = Config::load().expect("Unable to load config file");
-    println!("{:?}", config);
-    let tem_dir = fs::read_dir(&config.general.templates_path).expect("Unable to read templates dir");
-    for entry in tem_dir {
-        let entry = entry.expect("Unable to read entry");
-        println!("{:?}", entry.path().file_name().unwrap());
+
+    if use_config {
+        let config = Config::load().expect("Unable to load config file");
+        println!("{:?}", config);
+        let tem_dir = fs::read_dir(&config.general.templates_path).expect("Unable to read templates dir");
+        for entry in tem_dir {
+            let entry = entry.expect("Unable to read entry");
+            let file_name = entry.file_name();
+            // println!("{:?}", &file_name);
+            translate(&entry.path(), &file_name.to_str().unwrap(), &theme_txt, &generated);
+        }
+    } else {
+        let tem_dir = fs::read_dir(&template).expect("unable to read templates dir");
+        for entry in tem_dir {
+            let entry = entry.expect("unable to read entry");
+            let file_name = entry.file_name();
+            translate(&entry.path(), &file_name.to_str().unwrap(), &theme_txt, &generated);
+
+        }
+        // translate(file_path, file_name, theme_file);
     }
 }
