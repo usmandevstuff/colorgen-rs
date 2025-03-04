@@ -13,13 +13,13 @@ mod translate;
     about = "a cli app to generate colors based on a theme file.",
 )]
 struct Cli {
-    #[arg(short, long)]
+    #[arg(short, long, help = "template dir path")]
     template: Option<PathBuf>,
 
-    #[arg(short, long)]
+    #[arg(short, long, help = "output dir path")]
     output: Option<PathBuf>,
 
-    #[arg(short = 'T', long)]
+    #[arg(short = 'T', long, help = "theme txt file path")]
     theme_txt: Option<PathBuf>,
 
     #[arg(short, help = "use ONLY when you want to use config system.", action = clap::ArgAction::SetTrue)]
@@ -28,6 +28,7 @@ struct Cli {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Config {
+    theme: String,
     general: General,
 }
 
@@ -41,6 +42,7 @@ struct General {
 impl Config {
     fn default() -> Self {
         Config {
+            theme: "monochrome".to_string(),
             general: General {
                 templates_path: dirs::home_dir()
                     .unwrap()
@@ -115,13 +117,19 @@ fn main() {
 
     if use_config {
         let config = Config::load().expect("Unable to load config file");
-        println!("{:?}", config);
         let tem_dir = fs::read_dir(&config.general.templates_path).expect("Unable to read templates dir");
+        let output_dir = PathBuf::from(&config.general.output_path);
+        let themes_dir = PathBuf::from(&config.general.themes_path);
+        let theme_path = themes_dir.join(&config.theme);
+        if !theme_path.exists() {
+            panic!("Theme file does not exist");
+        }
+        let theme_file = theme_path.join("theme.txt");
         for entry in tem_dir {
             let entry = entry.expect("Unable to read entry");
             let file_name = entry.file_name();
             // println!("{:?}", &file_name);
-            translate(&entry.path(), &file_name.to_str().unwrap(), &theme_txt, &generated);
+            translate(&entry.path(), &file_name.to_str().unwrap(), &theme_file, &output_dir);
         }
     } else {
         let tem_dir = fs::read_dir(&template).expect("unable to read templates dir");
@@ -131,6 +139,5 @@ fn main() {
             translate(&entry.path(), &file_name.to_str().unwrap(), &theme_txt, &generated);
 
         }
-        // translate(file_path, file_name, theme_file);
     }
 }
